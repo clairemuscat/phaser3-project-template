@@ -23,7 +23,12 @@
         },
       };
 
-      var game = new Phaser.Game(config);
+      let game = new Phaser.Game(config);
+      let score = 0;
+      let scoreText;
+      let shortz;
+      let stars;
+      let platforms;
 
       function preload() {
         this.load.image("crossword", "src/assets/crossword.png");
@@ -32,15 +37,27 @@
         this.load.image("star", "src/assets/pen.png");
         this.load.image("can", "src/assets/pineapple.png");
         this.load.image("health", "src/assets/healthbar.png");
-        this.load.spritesheet("dude", "src/assets/yellow_ball.png", {
-          frameWidth: 29,
-          frameHeight: 28,
+        this.load.image("shortz", "src/assets/shortz.png");
+        // this.load.spritesheet("explosion", "src/assets/explosion.png", {
+        //   frameWidth: 29,
+        //   frameHeight: 28,
+        // });
+        this.load.spritesheet("dude", "src/assets/explosion.png", {
+          frameWidth: 60,
+          frameHeight: 53,
         });
       }
 
       function create() {
         this.add.image(400, 300, "crossword");
-
+        scoreText = this.add.text(50, 500, "score: 0 ", {
+          fontSize: "32px",
+          fill: "#000",
+        });
+        winningText = this.add.text(200, 250, "", {
+          fontSize: "72px",
+          fill: "#903",
+        });
         platforms = this.physics.add.staticGroup();
 
         platforms.create(400, 590, "ground").setScale(2).refreshBody();
@@ -50,7 +67,7 @@
         platforms.create(830, 181, "ground");
         platforms.create(378, -179, "vert");
 
-        player = this.physics.add.sprite(100, 200, "dude");
+        player = this.physics.add.sprite(100, 500, "dude");
 
         player.setBounce(0.2);
         player.setCollideWorldBounds(true);
@@ -78,15 +95,21 @@
         });
         stars = this.physics.add.group({
           key: "star",
-          repeat: 15,
-          setXY: { x: 12, y: 10, stepX: 70 },
+          repeat: 11,
+          setXY: { x: 12, y: 5, stepX: 70 },
         });
+        shortz = this.physics.add.group();
 
         stars.children.iterate(function (child) {
           child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+          child.setCollideWorldBounds(true);
         });
+
         this.physics.add.collider(stars, platforms);
         this.physics.add.collider(stars, player);
+        this.physics.add.collider(shortz, platforms);
+        this.physics.add.collider(player, shortz, hitShortz, null, this);
+
         this.physics.add.overlap(player, stars, collectStar, null, this);
       }
 
@@ -103,11 +126,39 @@
           player.anims.play("turn");
         }
         if (cursors.up.isDown && player.body.touching.down) {
-          player.setVelocityY(-330);
+          player.setVelocityY(-350);
         }
+      }
+      function hitShortz(player, bomb) {
+        this.physics.pause();
+        player.setTint(0xff0000);
+        this.anims.play("turn");
+        gameOver = true;
       }
       function collectStar(player, star) {
         star.disableBody(true, true);
+        score += 1;
+        console.log(score);
+        scoreText.setText("Score: " + score);
+
+        if (score === 15) {
+          this.physics.pause();
+          winningText.setText("You Win!!!");
+          gameOver = true;
+        }
+        if (stars.countActive(true) === 3) {
+          stars.children.iterate(function (child) {
+            child.enableBody(true, child.x, 0, true, true);
+          });
+        }
+        let x =
+          player.x < 4200
+            ? Phaser.Math.Between(400, 800)
+            : Phaser.Math.Between(0, 400);
+        let shortzBomb = shortz.create(x, 16, "shortz");
+        shortzBomb.setBounce(1);
+        shortzBomb.setCollideWorldBounds(true);
+        shortzBomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
       }
     </script>
   </body>
